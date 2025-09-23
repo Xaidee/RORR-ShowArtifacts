@@ -5,7 +5,7 @@ mods["RoRRModdingToolkit-RoRR_Modding_Toolkit"].auto(true)
 PATH = _ENV["!plugins_mod_folder_path"]
 
 local Settings = {
-	DEBUG = false,
+	DEBUG = true,
 	OFFSET_X = 108,
 	OFFSET_Y = 44,
 	SPRITE_SCALE = 0.6,
@@ -83,6 +83,7 @@ local draw_artifact = function(index, artifact, view)
 		{ color = Settings.COLORS.OUTLINE_LIGHT,                             },
 	}
 
+	log(LogLevel.DEBUG, "Drawing cool artifact shading using gm.gpu_..")
 	for _, setting in ipairs(fogSettings) do
 		log(LogLevel.DEBUG, "Calling gm.draw_sprite_ext and gm.gpu_set_fog with settings: color = %s, x_offset = %s, y_offset = %s", setting.color, (setting.x_offset or 0), (setting.y_offset or 0))
 		gm.gpu_set_fog(true, setting.color, 0, 0)
