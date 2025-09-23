@@ -4,7 +4,19 @@ mods["RoRRModdingToolkit-RoRR_Modding_Toolkit"].auto(true)
 
 PATH = _ENV["!plugins_mod_folder_path"]
 
-local Settings = {}
+local Settings = {
+	DEBUG = true,
+	OFFSET_X = 108,
+	OFFSET_Y = 44,
+	SPRITE_SCALE = 0.6,
+	SPRITE_SPACING = 32,
+	DRAW_BLACK_SHADOW = true,
+	COLORS = {
+		SHADOW = Color.from_hsv(345, 11, 29),
+		OUTLINE_DARK = Color.from_hsv(225, 16, 10),
+		OUTLINE_LIGHT = Color.from_hsv(0, 0, 42),
+	},
+}
 
 local LogLevel = {
 	INFO = 1,
@@ -82,52 +94,54 @@ local draw_artifact = function(index, artifact, view)
 end
 
 local init = function()
-	Settings = {
-		DEBUG = true,
-		OFFSET_X = 108,
-		OFFSET_Y = 44,
-		SPRITE_SCALE = 0.6,
-		SPRITE_SPACING = 32,
-		DRAW_BLACK_SHADOW = true,
-		COLORS = {
-			SHADOW = Color.from_hsv(345, 11, 29),
-			OUTLINE_DARK = Color.from_hsv(225, 16, 10),
-			OUTLINE_LIGHT = Color.from_hsv(0, 0, 42),
-		},
-	}
+	if not Settings then
+		log(LogLevel.ERROR, "Settings failed to init properly, if this is a dev environment HOTRELOADING/DEBUG should be enabled!")
+	end
+	-- HUD draw callback to display active artifacts (same place difficulty HUD is drawn)
+	log(LogLevel.INFO, "Registering ShowArtifacts-onHUDDraw")
+	Callback.add(Callback.TYPE.onHUDDraw, "ShowArtifacts-onHUDDraw", function()
+		log(LogLevel.INFO, "Running ShowArtifactHUDDraw")
+		if not Global.__run_exists then
+			log(LogLevel.ERROR, "Run doesn't seem to exist")
+			return
+		end
+
+		local artifacts, exist = Artifact.find_all()
+		if not exist then
+			log(LogLevel.ERROR, "Artifact.find_all() returned an empty table!")
+			return
+		end
+
+		local view = {
+			x = Global.___view_l_x,
+			y = Global.___view_l_y,
+			width = Global.___view_l_w
+		}
+		if not view.x or not view.y or not view.width then log(LogLevel.ERROR, "Failed to get view dimensions from Global") return end
+		local artifact_count = 0
+		for _,artifact in pairs(artifacts) do
+			log(LogLevel.INFO, "Checking if %s-%s is active", artifact.namespace, artifact.identifier)
+			if artifact.active then
+				artifact_count = artifact_count + 1
+				draw_artifact(artifact_count, artifact, view)
+			end
+		end
+	end)
+
+	-- once we have loaded everything, enable hot/live reloading.
+	-- this variable may be used by content code to make sure it behaves correctly when hotloading
+	HOTRELOADING = Settings.DEBUG
 end
 Initialize(init)
 
--- HUD draw callback to display active artifacts (same place difficulty HUD is drawn)
-log(LogLevel.INFO, "Registering callback ShowArtifactHUDDraw")
-Callback.add(Callback.TYPE.onHUDDraw, "ShowArtifactHUDDraw", function()
-	log(LogLevel.INFO, "Running ShowArtifactHUDDraw")
-	if not Global.__run_exists then
-		log(LogLevel.ERROR, "Run doesn't seem to exist")
-		return
-	end
+if HOTRELOADING then
+	-- Clear callbacks to avoid duplicate calls
+	Callback.remove("ShowArtifacts-onHUDDraw")
+	-- Now we can recall init()
+	init()
+end
 
-	local artifacts, exist = Artifact.find_all()
-	if not exist then
-		log(LogLevel.ERROR, "Artifact.find_all() returned an empty table!")
-		return
-	end
 
-	local view = {
-		x = Global.___view_l_x,
-		y = Global.___view_l_y,
-		width = Global.___view_l_w
-	}
-	if not view.x or not view.y or not view.width then log(LogLevel.ERROR, "Failed to get view dimensions from Global") return end
-	local artifact_count = 0
-	for _,artifact in pairs(artifacts) do
-		log(LogLevel.INFO, "Checking if %s-%s is active", artifact.namespace, artifact.identifier)
-		if artifact.active then
-			artifact_count = artifact_count + 1
-			draw_artifact(artifact_count, artifact, view)
-		end
-	end
-end)
 
 --[[
 --Credits to azzy for helping me with the rendering functions to create the cool display ^-^
