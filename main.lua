@@ -5,7 +5,7 @@ mods["RoRRModdingToolkit-RoRR_Modding_Toolkit"].auto(true)
 PATH = _ENV["!plugins_mod_folder_path"]
 
 local Settings = {
-	DEBUG = true,
+	DEBUG = false,
 	OFFSET_X = 108,
 	OFFSET_Y = 44,
 	SPRITE_SCALE = 0.6,
@@ -15,16 +15,14 @@ local Settings = {
 		SHADOW = Color.from_hsv(345, 11, 29),
 		OUTLINE_DARK = Color.from_hsv(225, 16, 10),
 		OUTLINE_LIGHT = Color.from_hsv(0, 0, 42),
-		WHITE = Color.WHITE,
-		BLACK = Color.BLACK
-	}
+	},
 }
 
 local LogLevel = {
 	INFO = 1,
 	DEBUG = 2,
 	WARN = 3,
-	ERROR = 4
+	ERROR = 4,
 }
 
 -- Custom log utility for printing
@@ -71,10 +69,13 @@ local draw_artifact = function(index, artifact, view)
 	log(LogLevel.INFO, "Drawing %s-%s (sprite %d) at (%d, %d)", artifact.namespace, artifact.identifier, sprite, x, y)
 
 	-- Draw BLACK shadow
-	if Settings.DRAW_BLACK_SHADOW then gm.draw_sprite_ext(sprite, 2, x, y + 1, scale, scale, 0, Settings.COLORS.BLACK, 1) end
+	if Settings.DRAW_BLACK_SHADOW then
+		log(LogLevel.DEBUG, "Calling gm.draw_sprite_ext for black back shadow")
+		gm.draw_sprite_ext(sprite, 2, x, y + 1, scale, scale, 0, Color.BLACK, 1)
+	end
 
 	-- Draw main sprite with layered fog effects
-	local fog_Settings = {
+	local fogSettings = {
 		{ color = Settings.COLORS.SHADOW,                       y_offset = 1 },
 		{ color = Settings.COLORS.OUTLINE_DARK,  x_offset = 1,  y_offset = 1 },
 		{ color = Settings.COLORS.OUTLINE_DARK,  x_offset = -1, y_offset = 1 },
@@ -82,10 +83,12 @@ local draw_artifact = function(index, artifact, view)
 		{ color = Settings.COLORS.OUTLINE_LIGHT,                             },
 	}
 
-	for _, setting in ipairs(fog_Settings) do
+	for _, setting in ipairs(fogSettings) do
+		log(LogLevel.DEBUG, "Calling gm.draw_sprite_ext and gm.gpu_set_fog with settings: color = %s, x_offset = %s, y_offset = %s", setting.color, (setting.x_offset or 0), (setting.y_offset or 0))
 		gm.gpu_set_fog(true, setting.color, 0, 0)
 		gm.draw_sprite_ext(sprite, 0, x + (setting.x_offset or 0), y + (setting.y_offset or 0), scale, scale, 0, Color.WHITE, 1)
 	end
+	log(LogLevel.DEBUG, "Drawing last layer, calling gm.gpu_set_fog")
 	gm.gpu_set_fog(false, Settings.COLORS.OUTLINE_LIGHT, 0, 0)
 end
 
@@ -93,9 +96,9 @@ end
 log(LogLevel.INFO, "Registering callback ShowArtifactHUDDraw")
 Callback.add(Callback.TYPE.onHUDDraw, "ShowArtifactHUDDraw", function()
 	log(LogLevel.INFO, "Running ShowArtifactHUDDraw")
-	if gm.variable_global_get("__run_exists") then
-		log(LogLevel.ERROR, "Run doesn't seem to exist!!")
-		--return
+	if not Global.__run_exists then
+		log(LogLevel.ERROR, "Run doesn't seem to exist")
+		return
 	end
 
 	local artifacts, exist = Artifact.find_all()
@@ -109,9 +112,10 @@ Callback.add(Callback.TYPE.onHUDDraw, "ShowArtifactHUDDraw", function()
 		y = Global.___view_l_y,
 		width = Global.___view_l_w
 	}
+	if not view.x or not view.y or not view.width then log(LogLevel.ERROR, "Failed to get view dimensions from Global") return end
 	local artifact_count = 0
 	for _,artifact in pairs(artifacts) do
-		log(LogLevel.INFO, "Checking if %s is active", artifact.identifier)
+		log(LogLevel.INFO, "Checking if %s-%s is active", artifact.namespace, artifact.identifier)
 		if artifact.active then
 			artifact_count = artifact_count + 1
 			draw_artifact(artifact_count, artifact, view)
