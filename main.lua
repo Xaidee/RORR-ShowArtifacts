@@ -4,71 +4,105 @@ mods["RoRRModdingToolkit-RoRR_Modding_Toolkit"].auto(true)
 
 PATH = _ENV["!plugins_mod_folder_path"]
 
--- Useful for live debugging, i.e. use of debug_print over print
--- Set to false automatically by ./create_package.sh when zipping
-DEBUG = true
-
-local CONFIG = {
+local Settings = {
+	DEBUG = true,
 	OFFSET_X = 108,
 	OFFSET_Y = 44,
 	SPRITE_SCALE = 0.6,
-	SPRITE_SPACING = 32
+	SPRITE_SPACING = 32,
+	DRAW_BLACK_SHADOW = true,
+	COLORS = {
+		SHADOW = Color.from_hsv(345, 11, 29),
+		OUTLINE_DARK = Color.from_hsv(225, 16, 10),
+		OUTLINE_LIGHT = Color.from_hsv(0, 0, 42),
+		WHITE = Color.WHITE,
+		BLACK = Color.BLACK
+	}
 }
 
-local COLORS = {
-	SHADOW = Color.from_hsv(345, 11, 29),
-	OUTLINE_DARK = Color.from_hsv(225, 16, 10),
-	OUTLINE_LIGHT = Color.from_hsv(0, 0, 42),
-	WHITE = Color.WHITE,
-	BLACK = Color.Black
+local LogLevel = {
+	INFO = 1,
+	DEBUG = 2,
+	WARN = 3,
+	ERROR = 4
 }
 
-local offset_x = 108
-local offset_y = 44
+-- Custom log utility for printing
+function log(level, message, ...)
+	-- Only log if DEBUG is enabled or level is ERROR/WARN
+	if not Settings.DEBUG and level ~= LogLevel.ERROR and level ~= LogLevel.WARN then return end
 
--- Debug print utility
-function debug_print(...)
-	if DEBUG then print(...) end
+	-- Prefix based on log level
+	local prefix = ""
+	if level == LogLevel.INFO then
+		prefix = "[INFO] "
+	elseif level == LogLevel.DEBUG then
+		prefix = "[DEBUG] "
+	elseif level == LogLevel.WARN then
+		prefix = "[WARN] "
+	elseif level == LogLevel.ERROR then
+		prefix = "[ERROR] "
+	end
+
+	-- Handle formatted vs. non-formatted messages
+	local final_message
+	if select("#", ...) > 0 then
+		-- Format the message if additional argument are not provided
+		final_message = prefix .. string.format(message, ...)
+	else
+		-- Use message as-is
+		final_message = prefix .. tostring(message)
+	end
+
+	print(final_message)
 end
 
 -- Draws artifacts from right-to-left with index being used as an offset
 local draw_artifact = function(index, artifact, view)
 	local sprite = artifact.loadout_sprite_id
 	if not sprite or sprite < 0 then
-		debug_print(string.format("Invalid sprite for %s-%s", artifact.namespace, artifact.identifier))
+		log(LogLevel.WARN, string.format("Invalid sprite for %s-%s", artifact.namespace, artifact.identifier))
 		return
 	end
-	local scale = CONFIG.SPRITE_SCALE
-	local x = gm.round(view.x + view.width - (CONFIG.OFFSET_X + CONFIG.SPRITE_SPACING * (index - 1) * scale))
-	local y = gm.round(view.y + CONFIG.OFFSET_Y)
+	local scale = Settings.SPRITE_SCALE
+	local x = gm.round(view.x + view.width - (Settings.OFFSET_X + Settings.SPRITE_SPACING * (index - 1) * scale))
+	local y = gm.round(view.y + Settings.OFFSET_Y)
 
-	debug_print(string.format("Drawing %s-%s (sprite %d) at (%d, %d)", artifact.namespace, artifact.identifier, sprite, x, y))
+	log(LogLevel.INFO, "Drawing %s-%s (sprite %d) at (%d, %d)", artifact.namespace, artifact.identifier, sprite, x, y)
 
-	-- Draw shadow
-	gm.draw_sprite_ext(sprite, 2, x, y + 1, scale, scale, 0, COLORS.BLACK, 1)
+	-- Draw BLACK shadow
+	if Settings.DRAW_BLACK_SHADOW then gm.draw_sprite_ext(sprite, 2, x, y + 1, scale, scale, 0, Settings.COLORS.BLACK, 1) end
 
 	-- Draw main sprite with layered fog effects
-	local fog_settings = {
-		{ color = COLORS.SHADOW,                       y_offset = 1 },
-		{ color = COLORS.OUTLINE_DARK,  x_offset = 1,  y_offset = 1 },
-		{ color = COLORS.OUTLINE_DARK,  x_offset = -1, y_offset = 1 },
-		{ color = COLORS.OUTLINE_DARK,                 y_offset = 2 },
-		{ color = COLORS.OUTLINE_LIGHT,                             },
+	local fog_Settings = {
+		{ color = Settings.COLORS.SHADOW,                       y_offset = 1 },
+		{ color = Settings.COLORS.OUTLINE_DARK,  x_offset = 1,  y_offset = 1 },
+		{ color = Settings.COLORS.OUTLINE_DARK,  x_offset = -1, y_offset = 1 },
+		{ color = Settings.COLORS.OUTLINE_DARK,                 y_offset = 2 },
+		{ color = Settings.COLORS.OUTLINE_LIGHT,                             },
 	}
 
-	for _, setting in ipairs(fog_settings) do
+	for _, setting in ipairs(fog_Settings) do
 		gm.gpu_set_fog(true, setting.color, 0, 0)
-		gm.draw_sprite_ext(sprite, 0, x + (setting.x_offset or 0), y + (setting.y_offset or 0), scale, scale, 0, COLORS.WHIE, 1)
+		gm.draw_sprite_ext(sprite, 0, x + (setting.x_offset or 0), y + (setting.y_offset or 0), scale, scale, 0, Color.WHITE, 1)
 	end
-	gm.gpu_set_fog(false, COLORS.OUTLINE_LIGHT, 0, 0)
+	gm.gpu_set_fog(false, Settings.COLORS.OUTLINE_LIGHT, 0, 0)
 end
 
 -- HUD draw callback to display active artifacts (same place difficulty HUD is drawn)
+log(LogLevel.INFO, "Registering callback ShowArtifactHUDDraw")
 Callback.add(Callback.TYPE.onHUDDraw, "ShowArtifactHUDDraw", function()
-	if gm.variable_global_get("__run_exists") then return end
+	log(LogLevel.INFO, "Running ShowArtifactHUDDraw")
+	if gm.variable_global_get("__run_exists") then
+		log(LogLevel.ERROR, "Run doesn't seem to exist!!")
+		--return
+	end
 
 	local artifacts, exist = Artifact.find_all()
-	if not exist then return end
+	if not exist then
+		log(LogLevel.ERROR, "Artifact.find_all() returned an empty table!")
+		return
+	end
 
 	local view = {
 		x = Global.___view_l_x,
@@ -77,6 +111,7 @@ Callback.add(Callback.TYPE.onHUDDraw, "ShowArtifactHUDDraw", function()
 	}
 	local artifact_count = 0
 	for _,artifact in pairs(artifacts) do
+		log(LogLevel.INFO, "Checking if %s is active", artifact.identifier)
 		if artifact.active then
 			artifact_count = artifact_count + 1
 			draw_artifact(artifact_count, artifact, view)
