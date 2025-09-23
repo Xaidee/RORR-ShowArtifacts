@@ -4,19 +4,7 @@ mods["RoRRModdingToolkit-RoRR_Modding_Toolkit"].auto(true)
 
 PATH = _ENV["!plugins_mod_folder_path"]
 
-local Settings = {
-	DEBUG = true,
-	OFFSET_X = 108,
-	OFFSET_Y = 44,
-	SPRITE_SCALE = 0.6,
-	SPRITE_SPACING = 32,
-	DRAW_BLACK_SHADOW = true,
-	COLORS = {
-		SHADOW = Color.from_hsv(345, 11, 29),
-		OUTLINE_DARK = Color.from_hsv(225, 16, 10),
-		OUTLINE_LIGHT = Color.from_hsv(0, 0, 42),
-	},
-}
+local Settings = {}
 
 local LogLevel = {
 	INFO = 1,
@@ -77,8 +65,8 @@ local draw_artifact = function(index, artifact, view)
 	-- Draw main sprite with layered fog effects
 	local fogSettings = {
 		{ color = Settings.COLORS.SHADOW,                       y_offset = 1 },
-		{ color = Settings.COLORS.OUTLINE_DARK,  x_offset = 1,  y_offset = 1 },
-		{ color = Settings.COLORS.OUTLINE_DARK,  x_offset = -1, y_offset = 1 },
+		{ color = Settings.COLORS.SHADOW,        x_offset = 1,  y_offset = 1 },
+		{ color = Settings.COLORS.SHADOW,        x_offset = -1, y_offset = 1 },
 		{ color = Settings.COLORS.OUTLINE_DARK,                 y_offset = 2 },
 		{ color = Settings.COLORS.OUTLINE_LIGHT,                             },
 	}
@@ -92,6 +80,23 @@ local draw_artifact = function(index, artifact, view)
 	log(LogLevel.DEBUG, "Drawing last layer, calling gm.gpu_set_fog")
 	gm.gpu_set_fog(false, Settings.COLORS.OUTLINE_LIGHT, 0, 0)
 end
+
+local init = function()
+	Settings = {
+		DEBUG = true,
+		OFFSET_X = 108,
+		OFFSET_Y = 44,
+		SPRITE_SCALE = 0.6,
+		SPRITE_SPACING = 32,
+		DRAW_BLACK_SHADOW = true,
+		COLORS = {
+			SHADOW = Color.from_hsv(345, 11, 29),
+			OUTLINE_DARK = Color.from_hsv(225, 16, 10),
+			OUTLINE_LIGHT = Color.from_hsv(0, 0, 42),
+		},
+	}
+end
+Initialize(init)
 
 -- HUD draw callback to display active artifacts (same place difficulty HUD is drawn)
 log(LogLevel.INFO, "Registering callback ShowArtifactHUDDraw")
