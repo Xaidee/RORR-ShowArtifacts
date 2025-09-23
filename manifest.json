@@ -1,5 +1,6 @@
 {
 	"name": "ShowArtifacts",
+	"author": "Xaidee",
 	"version_number": "1.0.0",
 	"website_url": "https://github.com/Xaidee/RORR-ShowArtifacts",
 	"description": "Displays all currently activated artifacts on the HUD.",
