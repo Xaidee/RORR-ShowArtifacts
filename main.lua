@@ -28,7 +28,13 @@ local LogLevel = {
 -- Custom log utility for printing
 function log(level, message, ...)
 	-- Only log if DEBUG is enabled or level is ERROR/WARN
-	if not Settings.DEBUG and level ~= LogLevel.ERROR and level ~= LogLevel.WARN then return end
+	if
+		not Settings.DEBUG
+		and level ~= LogLevel.ERROR
+		and level ~= LogLevel.WARN
+	then
+		return
+	end
 
 	-- Prefix based on log level
 	local prefix = ""
@@ -59,14 +65,36 @@ end
 local draw_artifact = function(index, artifact, view)
 	local sprite = artifact.loadout_sprite_id
 	if not sprite or sprite < 0 then
-		log(LogLevel.WARN, string.format("Invalid sprite for %s-%s", artifact.namespace, artifact.identifier))
+		log(
+			LogLevel.WARN,
+			string.format(
+				"Invalid sprite for %s-%s",
+				artifact.namespace,
+				artifact.identifier
+			)
+		)
 		return
 	end
 	local scale = Settings.SPRITE_SCALE
-	local x = gm.round(view.x + view.width - (Settings.OFFSET_X + Settings.SPRITE_SPACING * (index - 1) * scale))
+	local x = gm.round(
+		view.x
+			+ view.width
+			- (
+				Settings.OFFSET_X
+				+ Settings.SPRITE_SPACING * (index - 1) * scale
+			)
+	)
 	local y = gm.round(view.y + Settings.OFFSET_Y)
 
-	log(LogLevel.INFO, "Drawing %s-%s (sprite %d) at (%d, %d)", artifact.namespace, artifact.identifier, sprite, x, y)
+	log(
+		LogLevel.INFO,
+		"Drawing %s-%s (sprite %d) at (%d, %d)",
+		artifact.namespace,
+		artifact.identifier,
+		sprite,
+		x,
+		y
+	)
 
 	-- Draw BLACK shadow
 	if Settings.DRAW_BLACK_SHADOW then
@@ -76,18 +104,34 @@ local draw_artifact = function(index, artifact, view)
 
 	-- Draw main sprite with layered fog effects
 	local fogSettings = {
-		{ color = Settings.COLORS.SHADOW,                       y_offset = 1 },
-		{ color = Settings.COLORS.SHADOW,        x_offset = 1,  y_offset = 1 },
-		{ color = Settings.COLORS.SHADOW,        x_offset = -1, y_offset = 1 },
-		{ color = Settings.COLORS.OUTLINE_DARK,                 y_offset = 2 },
-		{ color = Settings.COLORS.OUTLINE_LIGHT,                             },
+		{ color = Settings.COLORS.SHADOW, y_offset = 1 },
+		{ color = Settings.COLORS.SHADOW, x_offset = 1, y_offset = 1 },
+		{ color = Settings.COLORS.SHADOW, x_offset = -1, y_offset = 1 },
+		{ color = Settings.COLORS.OUTLINE_DARK, y_offset = 2 },
+		{ color = Settings.COLORS.OUTLINE_LIGHT },
 	}
 
 	log(LogLevel.DEBUG, "Drawing cool artifact shading using gm.gpu_..")
 	for _, setting in ipairs(fogSettings) do
-		log(LogLevel.DEBUG, "Calling gm.draw_sprite_ext and gm.gpu_set_fog with settings: color = %s, x_offset = %s, y_offset = %s", setting.color, (setting.x_offset or 0), (setting.y_offset or 0))
+		log(
+			LogLevel.DEBUG,
+			"Calling gm.draw_sprite_ext and gm.gpu_set_fog with settings: color = %s, x_offset = %s, y_offset = %s",
+			setting.color,
+			(setting.x_offset or 0),
+			(setting.y_offset or 0)
+		)
 		gm.gpu_set_fog(true, setting.color, 0, 0)
-		gm.draw_sprite_ext(sprite, 0, x + (setting.x_offset or 0), y + (setting.y_offset or 0), scale, scale, 0, Color.WHITE, 1)
+		gm.draw_sprite_ext(
+			sprite,
+			0,
+			x + (setting.x_offset or 0),
+			y + (setting.y_offset or 0),
+			scale,
+			scale,
+			0,
+			Color.WHITE,
+			1
+		)
 	end
 	log(LogLevel.DEBUG, "Drawing last layer, calling gm.gpu_set_fog")
 	gm.gpu_set_fog(false, Settings.COLORS.OUTLINE_LIGHT, 0, 0)
@@ -95,7 +139,10 @@ end
 
 local init = function()
 	if not Settings then
-		log(LogLevel.ERROR, "Settings failed to init properly, if this is a dev environment HOTRELOADING/DEBUG should be enabled!")
+		log(
+			LogLevel.ERROR,
+			"Settings failed to init properly, if this is a dev environment HOTRELOADING/DEBUG should be enabled!"
+		)
 	end
 	-- HUD draw callback to display active artifacts (same place difficulty HUD is drawn)
 	log(LogLevel.INFO, "Registering ShowArtifacts-onHUDDraw")
@@ -115,12 +162,20 @@ local init = function()
 		local view = {
 			x = Global.___view_l_x,
 			y = Global.___view_l_y,
-			width = Global.___view_l_w
+			width = Global.___view_l_w,
 		}
-		if not view.x or not view.y or not view.width then log(LogLevel.ERROR, "Failed to get view dimensions from Global") return end
+		if not view.x or not view.y or not view.width then
+			log(LogLevel.ERROR, "Failed to get view dimensions from Global")
+			return
+		end
 		local artifact_count = 0
-		for _,artifact in pairs(artifacts) do
-			log(LogLevel.INFO, "Checking if %s-%s is active", artifact.namespace, artifact.identifier)
+		for _, artifact in pairs(artifacts) do
+			log(
+				LogLevel.INFO,
+				"Checking if %s-%s is active",
+				artifact.namespace,
+				artifact.identifier
+			)
 			if artifact.active then
 				artifact_count = artifact_count + 1
 				draw_artifact(artifact_count, artifact, view)
@@ -140,8 +195,6 @@ if HOTRELOADING then
 	-- Now we can recall init()
 	init()
 end
-
-
 
 --[[
 --Credits to azzy for helping me with the rendering functions to create the cool display ^-^
@@ -181,4 +234,5 @@ Callback.add(Callback.TYPE.onPlayerHUDDraw, "ArtifactDisplay", function(actor, x
 		end
 	end
 end)
-]]--
+]]
+--
