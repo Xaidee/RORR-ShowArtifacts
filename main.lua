@@ -1,9 +1,11 @@
 -- ShowArtifacts
 -- Xaidee
-mods["ReturnsAPI-ReturnsAPI"].auto{ mp = true }
+mods["ReturnsAPI-ReturnsAPI"].auto{ namespace = "show_artifacts", mp = true }
 
+NAMESPACE = "Xaidee-ShowArtifacts"
 PATH = _ENV["!plugins_mod_folder_path"]
 
+---@class Settings: table
 Settings = {
 	OFFSET_X = 108,
 	OFFSET_Y = 44,
@@ -66,6 +68,7 @@ local draw_artifact = function(index, artifact, view)
 end
 
 local init = function()
+
 	-- HUD draw callback to display active artifacts (same place difficulty HUD is drawn)
 	Callback.add(Callback.ON_HUD_DRAW, function()
 		if not Global.__run_exists then
@@ -90,6 +93,10 @@ local init = function()
 	end)
 
 	require("config")
+	---Load config if it's there
+	if (load_config() ~= nil) then
+		Settings = load_config()
+	end
 
 	-- once we have loaded everything, enable hot/live reloading.
 	-- this variable may be used by content code to make sure it behaves correctly when hotloading
