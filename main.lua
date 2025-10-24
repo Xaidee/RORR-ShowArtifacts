@@ -1,11 +1,10 @@
 -- ShowArtifacts
 -- Xaidee
-mods["RoRRModdingToolkit-RoRR_Modding_Toolkit"].auto(true)
+mods["ReturnsAPI-ReturnsAPI"].auto{ mp = true }
 
 PATH = _ENV["!plugins_mod_folder_path"]
 
-local Settings = {
-	DEBUG = true,
+Settings = {
 	OFFSET_X = 108,
 	OFFSET_Y = 44,
 	SPRITE_SCALE = 0.6,
@@ -18,65 +17,14 @@ local Settings = {
 	},
 }
 
-local LogLevel = {
-	INFO = 1,
-	DEBUG = 2,
-	WARN = 3,
-	ERROR = 4,
-}
-
--- Custom log utility for printing
-function log(level, message, ...)
-	-- Only log if DEBUG is enabled or level is ERROR/WARN
-	if
-		not Settings.DEBUG
-		and level ~= LogLevel.ERROR
-		and level ~= LogLevel.WARN
-	then
-		return
-	end
-
-	-- Prefix based on log level
-	local prefix = ""
-	if level == LogLevel.INFO then
-		prefix = "[INFO] "
-	elseif level == LogLevel.DEBUG then
-		prefix = "[DEBUG] "
-	elseif level == LogLevel.WARN then
-		prefix = "[WARN] "
-	elseif level == LogLevel.ERROR then
-		prefix = "[ERROR] "
-	end
-
-	-- Handle formatted vs. non-formatted messages
-	local final_message
-	if select("#", ...) > 0 then
-		-- Format the message if additional argument are not provided
-		final_message = prefix .. string.format(message, ...)
-	else
-		-- Use message as-is
-		final_message = prefix .. tostring(message)
-	end
-
-	print(final_message)
-end
-
 -- Draws artifacts from right-to-left with index being used as an offset
 local draw_artifact = function(index, artifact, view)
 	local sprite = artifact.loadout_sprite_id
 	if not sprite or sprite < 0 then
-		log(
-			LogLevel.WARN,
-			string.format(
-				"Invalid sprite for %s-%s",
-				artifact.namespace,
-				artifact.identifier
-			)
-		)
 		return
 	end
 	local scale = Settings.SPRITE_SCALE
-	local x = gm.round(
+	local x = GM.round(
 		view.x
 			+ view.width
 			- (
@@ -84,22 +32,11 @@ local draw_artifact = function(index, artifact, view)
 				+ Settings.SPRITE_SPACING * (index - 1) * scale
 			)
 	)
-	local y = gm.round(view.y + Settings.OFFSET_Y)
-
-	log(
-		LogLevel.INFO,
-		"Drawing %s-%s (sprite %d) at (%d, %d)",
-		artifact.namespace,
-		artifact.identifier,
-		sprite,
-		x,
-		y
-	)
+	local y = GM.round(view.y + Settings.OFFSET_Y)
 
 	-- Draw BLACK shadow
 	if Settings.DRAW_BLACK_SHADOW then
-		log(LogLevel.DEBUG, "Calling gm.draw_sprite_ext for black back shadow")
-		gm.draw_sprite_ext(sprite, 2, x, y + 1, scale, scale, 0, Color.BLACK, 1)
+		GM.draw_sprite_ext(sprite, 2, x, y + 1, scale, scale, 0, Color.BLACK, 1)
 	end
 
 	-- Draw main sprite with layered fog effects
@@ -111,17 +48,9 @@ local draw_artifact = function(index, artifact, view)
 		{ color = Settings.COLORS.OUTLINE_LIGHT },
 	}
 
-	log(LogLevel.DEBUG, "Drawing cool artifact shading using gm.gpu_..")
 	for _, setting in ipairs(fogSettings) do
-		log(
-			LogLevel.DEBUG,
-			"Calling gm.draw_sprite_ext and gm.gpu_set_fog with settings: color = %s, x_offset = %s, y_offset = %s",
-			setting.color,
-			(setting.x_offset or 0),
-			(setting.y_offset or 0)
-		)
-		gm.gpu_set_fog(true, setting.color, 0, 0)
-		gm.draw_sprite_ext(
+		GM.gpu_set_fog(true, setting.color, 0, 0)
+		GM.draw_sprite_ext(
 			sprite,
 			0,
 			x + (setting.x_offset or 0),
@@ -133,31 +62,17 @@ local draw_artifact = function(index, artifact, view)
 			1
 		)
 	end
-	log(LogLevel.DEBUG, "Drawing last layer, calling gm.gpu_set_fog")
-	gm.gpu_set_fog(false, Settings.COLORS.OUTLINE_LIGHT, 0, 0)
+	GM.gpu_set_fog(false, Settings.COLORS.OUTLINE_LIGHT, 0, 0)
 end
 
 local init = function()
-	if not Settings then
-		log(
-			LogLevel.ERROR,
-			"Settings failed to init properly, if this is a dev environment HOTRELOADING/DEBUG should be enabled!"
-		)
-	end
 	-- HUD draw callback to display active artifacts (same place difficulty HUD is drawn)
-	log(LogLevel.INFO, "Registering ShowArtifacts-onHUDDraw")
-	Callback.add(Callback.TYPE.onHUDDraw, "ShowArtifacts-onHUDDraw", function()
-		log(LogLevel.INFO, "Running ShowArtifactHUDDraw")
+	Callback.add(Callback.ON_HUD_DRAW, function()
 		if not Global.__run_exists then
-			log(LogLevel.ERROR, "Run doesn't seem to exist")
 			return
 		end
 
-		local artifacts, exist = Artifact.find_all()
-		if not exist then
-			log(LogLevel.ERROR, "Artifact.find_all() returned an empty table!")
-			return
-		end
+		local artifacts = Artifact.find_all(true, Artifact.Property.ACTIVE)
 
 		local view = {
 			x = Global.___view_l_x,
@@ -165,34 +80,24 @@ local init = function()
 			width = Global.___view_l_w,
 		}
 		if not view.x or not view.y or not view.width then
-			log(LogLevel.ERROR, "Failed to get view dimensions from Global")
 			return
 		end
 		local artifact_count = 0
-		for _, artifact in pairs(artifacts) do
-			log(
-				LogLevel.INFO,
-				"Checking if %s-%s is active",
-				artifact.namespace,
-				artifact.identifier
-			)
-			if artifact.active then
-				artifact_count = artifact_count + 1
-				draw_artifact(artifact_count, artifact, view)
-			end
+		for _, artifact in ipairs(artifacts) do
+			artifact_count = artifact_count + 1
+			draw_artifact(artifact_count, artifact, view)
 		end
 	end)
 
+	require("config")
+
 	-- once we have loaded everything, enable hot/live reloading.
 	-- this variable may be used by content code to make sure it behaves correctly when hotloading
-	HOTRELOADING = Settings.DEBUG
+	HOTRELOADING = true
 end
-Initialize(init)
+Initialize.add(init)
 
 if HOTRELOADING then
-	-- Clear callbacks to avoid duplicate calls
-	Callback.remove("ShowArtifacts-onHUDDraw")
-	-- Now we can recall init()
 	init()
 end
 
