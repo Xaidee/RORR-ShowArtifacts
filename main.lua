@@ -2,11 +2,19 @@
 -- Xaidee
 mods["ReturnsAPI-ReturnsAPI"].auto{ namespace = "show_artifacts", mp = true }
 
-NAMESPACE = "Xaidee-ShowArtifacts"
 PATH = _ENV["!plugins_mod_folder_path"]
 
 ---@class Settings: table
-Settings = {
+---@field OFFSET_X number
+---@field OFFSET_Y number
+---@field SPRITE_SCALE number
+---@field SPRITE_SPACING number
+---@field DRAW_BLACK_SHADOW boolean
+---@field COLORS {key: number }
+Settings = DefaultSettings
+
+---@type Settings
+DefaultSettings = {
 	OFFSET_X = 108,
 	OFFSET_Y = 44,
 	SPRITE_SCALE = 0.6,

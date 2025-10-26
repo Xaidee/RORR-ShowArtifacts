@@ -11,6 +11,12 @@ draw_shadow:add_setter(function(value)
 	save_config(Settings)
 end)
 
+local reset_config = modOptions:add_button("reset_config")
+reset_config:add_callback(function()
+	Settings = DefaultSettings
+	save_config(Settings)
+end)
+
 local tOML = TOML.new()
 
 ---@param settings Settings
