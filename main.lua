@@ -29,7 +29,7 @@ DefaultSettings = {
 
 -- Draws artifacts from right-to-left with index being used as an offset
 local draw_artifact = function(index, artifact, view)
-	local sprite = artifact.loadout_sprite_id
+	local sprite = artifact.sprite_loadout_id
 	if not sprite or sprite < 0 then
 		return
 	end
