@@ -1,3 +1,7 @@
+# 1.2.1
+ - Fix that updates a change to artifact's sprite ids found in ReturnsAPI 0.1.19
+ - Update dependency versions for ReturnOfModding and ReturnsAPI
+
 # 1.2.0
  - Port to use ReturnsAPI
  - Added configuration via the in-game settings menu.

@@ -1,11 +1,11 @@
 {
 	"name": "ShowArtifacts",
 	"author": "Xaidee",
-	"version_number": "1.2.0",
+	"version_number": "1.2.1",
 	"website_url": "https://github.com/Xaidee/RORR-ShowArtifacts",
 	"description": "Displays all currently activated artifacts on the HUD.",
 	"dependencies": [
-		"ReturnOfModding-ReturnOfModding-1.1.3",
-		"ReturnsAPI-ReturnsAPI-0.1.18"
+		"ReturnOfModding-ReturnOfModding-1.1.7",
+		"ReturnsAPI-ReturnsAPI-0.1.19"
 	]
 }
