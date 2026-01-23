@@ -1,3 +1,8 @@
+# 1.2.2
+ - Make the mod work again (i have no idea how long it's been broken).
+   * The global Settings was being set to DefaultSettings before it was defined and thus returning null and breaking everything.
+   * Maybe this only affected new instances that didn't have a config file yet?
+
 # 1.2.1
  - Fix that updates a change to artifact's sprite ids found in ReturnsAPI 0.1.19
  - Update dependency versions for ReturnOfModding and ReturnsAPI
