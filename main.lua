@@ -1,8 +1,22 @@
 -- ShowArtifacts
 -- Xaidee
-mods["ReturnsAPI-ReturnsAPI"].auto{ namespace = "show_artifacts", mp = true }
+mods["ReturnsAPI-ReturnsAPI"].auto { namespace = "show_artifacts", mp = true }
 
 PATH = _ENV["!plugins_mod_folder_path"]
+
+---@type Settings
+DefaultSettings = {
+    OFFSET_X = 108,
+    OFFSET_Y = 44,
+    SPRITE_SCALE = 0.6,
+    SPRITE_SPACING = 32,
+    DRAW_BLACK_SHADOW = true,
+    COLORS = {
+        SHADOW = Color.from_hsv(345, 11, 29),
+        OUTLINE_DARK = Color.from_hsv(225, 16, 10),
+        OUTLINE_LIGHT = Color.from_hsv(0, 0, 42),
+    },
+}
 
 ---@class Settings: table
 ---@field OFFSET_X number
@@ -13,107 +27,92 @@ PATH = _ENV["!plugins_mod_folder_path"]
 ---@field COLORS {key: number }
 Settings = DefaultSettings
 
----@type Settings
-DefaultSettings = {
-	OFFSET_X = 108,
-	OFFSET_Y = 44,
-	SPRITE_SCALE = 0.6,
-	SPRITE_SPACING = 32,
-	DRAW_BLACK_SHADOW = true,
-	COLORS = {
-		SHADOW = Color.from_hsv(345, 11, 29),
-		OUTLINE_DARK = Color.from_hsv(225, 16, 10),
-		OUTLINE_LIGHT = Color.from_hsv(0, 0, 42),
-	},
-}
-
 -- Draws artifacts from right-to-left with index being used as an offset
 local draw_artifact = function(index, artifact, view)
-	local sprite = artifact.sprite_loadout_id
-	if not sprite or sprite < 0 then
-		return
-	end
-	local scale = Settings.SPRITE_SCALE
-	local x = GM.round(
-		view.x
-			+ view.width
-			- (
-				Settings.OFFSET_X
-				+ Settings.SPRITE_SPACING * (index - 1) * scale
-			)
-	)
-	local y = GM.round(view.y + Settings.OFFSET_Y)
+    local sprite = artifact.sprite_loadout_id
+    if not sprite or sprite < 0 then
+        return
+    end
+    local scale = Settings.SPRITE_SCALE
+    local x = GM.round(
+        view.x
+        + view.width
+        - (
+            Settings.OFFSET_X
+            + Settings.SPRITE_SPACING * (index - 1) * scale
+        )
+    )
+    local y = GM.round(view.y + Settings.OFFSET_Y)
 
-	-- Draw BLACK shadow
-	if Settings.DRAW_BLACK_SHADOW then
-		GM.draw_sprite_ext(sprite, 2, x, y + 1, scale, scale, 0, Color.BLACK, 1)
-	end
+    -- Draw BLACK shadow
+    if Settings.DRAW_BLACK_SHADOW then
+        GM.draw_sprite_ext(sprite, 2, x, y + 1, scale, scale, 0, Color.BLACK, 1)
+    end
 
-	-- Draw main sprite with layered fog effects
-	local fogSettings = {
-		{ color = Settings.COLORS.SHADOW, y_offset = 1 },
-		{ color = Settings.COLORS.SHADOW, x_offset = 1, y_offset = 1 },
-		{ color = Settings.COLORS.SHADOW, x_offset = -1, y_offset = 1 },
-		{ color = Settings.COLORS.OUTLINE_DARK, y_offset = 2 },
-		{ color = Settings.COLORS.OUTLINE_LIGHT },
-	}
+    -- Draw main sprite with layered fog effects
+    local fogSettings = {
+        { color = Settings.COLORS.SHADOW,       y_offset = 1 },
+        { color = Settings.COLORS.SHADOW,       x_offset = 1,  y_offset = 1 },
+        { color = Settings.COLORS.SHADOW,       x_offset = -1, y_offset = 1 },
+        { color = Settings.COLORS.OUTLINE_DARK, y_offset = 2 },
+        { color = Settings.COLORS.OUTLINE_LIGHT },
+    }
 
-	for _, setting in ipairs(fogSettings) do
-		GM.gpu_set_fog(true, setting.color, 0, 0)
-		GM.draw_sprite_ext(
-			sprite,
-			0,
-			x + (setting.x_offset or 0),
-			y + (setting.y_offset or 0),
-			scale,
-			scale,
-			0,
-			Color.WHITE,
-			1
-		)
-	end
-	GM.gpu_set_fog(false, Settings.COLORS.OUTLINE_LIGHT, 0, 0)
+    for _, setting in ipairs(fogSettings) do
+        GM.gpu_set_fog(true, setting.color, 0, 0)
+        GM.draw_sprite_ext(
+            sprite,
+            0,
+            x + (setting.x_offset or 0),
+            y + (setting.y_offset or 0),
+            scale,
+            scale,
+            0,
+            Color.WHITE,
+            1
+        )
+    end
+    GM.gpu_set_fog(false, Settings.COLORS.OUTLINE_LIGHT, 0, 0)
 end
 
 local init = function()
+    -- HUD draw callback to display active artifacts (same place difficulty HUD is drawn)
+    Callback.add(Callback.ON_HUD_DRAW, function()
+        if not Global.__run_exists then
+            return
+        end
 
-	-- HUD draw callback to display active artifacts (same place difficulty HUD is drawn)
-	Callback.add(Callback.ON_HUD_DRAW, function()
-		if not Global.__run_exists then
-			return
-		end
+        local artifacts = Artifact.find_all(true, Artifact.Property.ACTIVE)
 
-		local artifacts = Artifact.find_all(true, Artifact.Property.ACTIVE)
+        local view = {
+            x = Global.___view_l_x,
+            y = Global.___view_l_y,
+            width = Global.___view_l_w,
+        }
+        if not view.x or not view.y or not view.width then
+            return
+        end
+        local artifact_count = 0
+        for _, artifact in ipairs(artifacts) do
+            artifact_count = artifact_count + 1
+            draw_artifact(artifact_count, artifact, view)
+        end
+    end)
 
-		local view = {
-			x = Global.___view_l_x,
-			y = Global.___view_l_y,
-			width = Global.___view_l_w,
-		}
-		if not view.x or not view.y or not view.width then
-			return
-		end
-		local artifact_count = 0
-		for _, artifact in ipairs(artifacts) do
-			artifact_count = artifact_count + 1
-			draw_artifact(artifact_count, artifact, view)
-		end
-	end)
+    require("config")
+    ---Load config if it's there
+    if (load_config() ~= nil) then
+        Settings = load_config()
+    end
 
-	require("config")
-	---Load config if it's there
-	if (load_config() ~= nil) then
-		Settings = load_config()
-	end
-
-	-- once we have loaded everything, enable hot/live reloading.
-	-- this variable may be used by content code to make sure it behaves correctly when hotloading
-	HOTRELOADING = true
+    -- once we have loaded everything, enable hot/live reloading.
+    -- this variable may be used by content code to make sure it behaves correctly when hotloading
+    HOTRELOADING = true
 end
 Initialize.add(init)
 
 if HOTRELOADING then
-	init()
+    init()
 end
 
 --[[
